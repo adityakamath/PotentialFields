@@ -18,5 +18,5 @@ class Agent(object):
         time_amount += time_diff
         if time_amount >= limit:
             # Turn left abount 60 degrees
-            time_amount = 0
+            time_amount = 0 
         
