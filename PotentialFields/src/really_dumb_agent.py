@@ -3,7 +3,6 @@ Created on Sep 25, 2012
 
 @author: hitokazu
 '''
-
 import sys
 import math
 import time
@@ -18,13 +17,19 @@ class Agent(object):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
+        self.elapsed_time = 0
         self.moving_time = self.set_moving_time()
+        self.shooting_time = self.set_shooting_time()
         
     def set_moving_time(self):
         """ Set time to move forward (3 to 8 sec.)"""
-        return random.randint(3,8)
+        return random.uniform(3,8) # sample a value between 3 and 8 from the uniform dist.
 
-    def tick(self, time_diff):
+    def set_shooting_time(self):
+        """ Set time to shoot (1.5 and 2.5 sec.) """
+        return random.uniform(1.5, 2.5) # sample a value between 1.5 and 2.5 from the uniform dist.
+
+    def tick(self, time_diff, angle, shoot):
         """Some time has passed; decide what to do next."""
         mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
         self.mytanks = mytanks
@@ -35,13 +40,23 @@ class Agent(object):
                         self.constants['team']]
 
         self.commands = []
-
-        if time_diff > self.moving_time:
-            for tank in mytanks:
-                pass
+        
+        if shoot == True:
+            if angle == True:
+                for tank in mytanks:
+                    self.shoot(tank)
+                    self.change_angle(tank)
+            else:
+                for tank in mytanks:
+                    self.shoot(tank)
+                    self.move_forward(tank)
         else:
-            for tank in mytanks:
-                self.move_forward(tank)
+            if angle == True:
+                for tank in mytanks:
+                    self.change_angle(tank)
+            else:
+                for tank in mytanks:
+                    self.move_forward(tank)
 
         results = self.bzrc.do_commands(self.commands)
 
@@ -51,44 +66,19 @@ class Agent(object):
         command = Command(tank.index, speed, 0, False)
         self.commands.append(command)
 
-    def change_angle(self, tank):
-        """ Turn left about 60 degrees """
-        pass
-    
-    def attack_enemies(self, tank):
-        """Find the closest enemy and chase it, shooting as you go."""
-        best_enemy = None
-        best_dist = 2 * float(self.constants['worldsize'])
-        for enemy in self.enemies:
-            if enemy.status != 'alive':
-                continue
-            dist = math.sqrt((enemy.x - tank.x)**2 + (enemy.y - tank.y)**2)
-            if dist < best_dist:
-                best_dist = dist
-                best_enemy = enemy
-        if best_enemy is None:
-            command = Command(tank.index, 0, 0, False)
-            self.commands.append(command)
-        else:
-            self.move_to_position(tank, best_enemy.x, best_enemy.y)
-
-    def move_to_position(self, tank, target_x, target_y):
-        """Set command to move to given coordinates."""
-        target_angle = math.atan2(target_y - tank.y,
-                                  target_x - tank.x)
-        relative_angle = self.normalize_angle(target_angle - tank.angle)
-        command = Command(tank.index, 1, 2 * relative_angle, True)
+    def stop(self, tank):
+        command = Command(tank.index, 0, 0, False)
         self.commands.append(command)
 
-    def normalize_angle(self, angle):
-        """Make any angle be between +/- pi."""
-        angle -= 2 * math.pi * int (angle / (2 * math.pi))
-        if angle <= -math.pi:
-            angle += 2 * math.pi
-        elif angle > math.pi:
-            angle -= 2 * math.pi
-        return angle
-
+    def change_angle(self, tank):
+        """ Turn left about 60 degrees """
+        command = Command(tank.index, 0, 1, False)
+        self.commands.append(command)
+    
+    def shoot(self, tank):
+        command = Command(tank.index, 0, 0, True)
+        self.commands.append(command)
+    
 
 def main():
     # Process CLI arguments.
@@ -106,17 +96,31 @@ def main():
 
     agent = Agent(bzrc)
 
-    prev_time = time.time()
+    agent.elapsed_time = prev_time = time.time()
     time_diff = 0
 
     print "Moving Time: %d" % agent.moving_time
 
     # Run the agent
     try:
-        while agent.moving_time > time_diff:
-            print "Elapsed Time: %d" % time_diff
+        while True: 
+            print "Elapsed Time: %f" % time_diff
             time_diff = time.time() - prev_time
-            agent.tick(time_diff)
+            if time.time() - agent.elapsed_time > agent.shooting_time:
+                print "Shoot!"
+                agent.tick(time_diff, False, True)
+                agent.shooting_time = agent.set_shooting_time()
+                agent.elapsed_time = time.time()
+            if time_diff > agent.moving_time:
+                print "Turning 60 degrees." 
+                if time_diff < agent.moving_time + 0.83:
+                    agent.tick(time_diff, True, False)
+                else:
+                    agent.moving_time = agent.set_moving_time()
+                    prev_time = time.time()
+                    print "Moving Time: %d" % agent.moving_time
+            else:
+                agent.tick(time_diff, False, False)
     except KeyboardInterrupt:
         print "Exiting due to keyboard interrupt."
         bzrc.close()
@@ -125,4 +129,3 @@ def main():
 if __name__ == '__main__':
     main()
 
-# vim: et sw=4 sts=4
