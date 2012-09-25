@@ -37,6 +37,9 @@ class Agent(object):
 
         self.commands = []
         
+        for tank in self.mytanks:
+            self.get_direction(tank)
+        
 #        if shoot == True:
 #            if angle == True:
 #                for tank in mytanks:
@@ -56,42 +59,60 @@ class Agent(object):
 
         results = self.bzrc.do_commands(self.commands)
         
-    def compute_attractive_fields(self, tank):
-        """ Compute attractive fields that the tank directly encounters. """
-        # 1. find the closest flag
-        # 2. compute the distance between the tank and the closest goal
-        # 3. Move toward the goal!!
-        pass
-    
-    def find_closest_flag(self, tank):
-        """ Identify the closest flag from the tank. """
-        pass
-    
-    def compute_flag_distance(self, tank):
-        """ Compute the distance between the tank and the closest goal. """
-        pass
-    
-    def move_forward(self, tank):
-        """ Tanks move forward. """
-        speed = 0.1 + random.uniform(0, 0.9) # choose speed value between 
-        command = Command(tank.index, speed, 0, False)
+    def get_direction(self, tank):
+        """ Get the moving direction based on the strongest attractive vector """
+        angle, vector = self.compute_attractive_vectors(tank) # compute the strongest attractive vector and the target flag
+        relative_angle = self.normalize_angle(angle - tank.angle)
+        print "relative angle: %f" % relative_angle
+        command = Command(tank.index, 1, relative_angle, False)
         self.commands.append(command)
+        
+    def compute_attractive_vectors(self, tank):
+        """ computer the strongest attractive vector and return the direction and the angle """
+        
+        delta_x = delta_y = 0
+        min_vector = float("inf")
+        best_theta = 0
+        best_flag = None
 
-    def stop(self, tank):
-        command = Command(tank.index, 0, 0, False)
-        self.commands.append(command)
-
-    def change_angle(self, tank):
-        """ Turn left about 60 degrees """
-        command = Command(tank.index, 1, self.get_60_degrees(), False)
-        self.commands.append(command)
-    
-    def get_60_degrees(self):
-        """ Rotate 60 degrees to the left """
-        return 2 * self.normalize_angle(math.pi/3)
-                
+#        colors = []
+#        for flag in self.flags:
+#            colors.append(flag.color)
+#        
+#        print "flags: %s" % str(colors)
+        
+        for flag in self.flags:
+            if flag.color != self.constants['team']:
+                d = math.sqrt((flag.x - tank.x)**2 + (flag.x - tank.y)**2) # get distance between tank and flag
+                if d == 0: # if tank reaches the flag
+                    delta_x = delta_y = 0
+                    break
+                else:              
+                    theta = math.atan2(tank.y-flag.y, tank.x-flag.x) # compute the angle between tank and flag
+                    cur_delta_x = d * math.cos(theta)
+                    cur_delta_y = d * math.sin(theta)
+                    cur_vector = cur_delta_x**2 + cur_delta_y ** 2
+                    print "color: %s \t cur_vector: %f" % (flag.color, cur_vector)
+                    if min_vector > cur_vector:
+                        delta_x = cur_delta_x
+                        delta_y = cur_delta_y
+                        best_theta = theta
+                        min_vector = cur_vector
+                        best_flag = flag
+        
+        print "closest flag: %s" % best_flag.color
+        return (theta, math.sqrt(min_vector))
+            
     def shoot(self, tank):
         command = Command(tank.index, 0, 0, True)
+        self.commands.append(command)
+
+    def move_to_position(self, tank, target_x, target_y):
+        """Set command to move to given coordinates."""
+        target_angle = math.atan2(target_y - tank.y,
+                                  target_x - tank.x)
+        relative_angle = self.normalize_angle(target_angle - tank.angle)
+        command = Command(tank.index, 1, 2 * relative_angle, True)
         self.commands.append(command)
     
     def normalize_angle(self, angle):
@@ -127,10 +148,10 @@ def main():
     # Run the agent
     try:
         while True: 
-            print "Elapsed Time: %f" % time_diff
+            #print "Elapsed Time: %f" % time_diff
             agent.tick(time_diff)
-            for flag in agent.flags:
-                print flag.x, flag.y, flag.color, flag.poss_color
+            #for flag in agent.flags:
+                #print flag.x, flag.y, flag.color, flag.poss_color
 #            time_diff = time.time() - prev_time
 #            if time.time() - agent.elapsed_time > agent.shooting_time:
 #                print "Shoot!"

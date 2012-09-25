@@ -1,4 +1,5 @@
-../../bzrflag/bin/bzrflag --world=../../bzrflag/maps/rotated_box_world.bzw --friendly-fire --red-port=50100 --green-port=50101 --purple-port=50102 --blue-port=50103 $@ &
+#../../bzrflag/bin/bzrflag --world=../../bzrflag/maps/rotated_box_world.bzw --friendly-fire --red-port=50100 --green-port=50101 --purple-port=50102 --blue-port=50103 $@ &
+../../bzrflag/bin/bzrflag --world=../../bzrflag/maps/four_ls.bzw --friendly-fire --red-port=50100 --green-port=50101 --purple-port=50102 --blue-port=50103 $@ &
 sleep 2
 
 #make --directory=src/
