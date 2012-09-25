@@ -17,6 +17,7 @@ class Agent(object):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
+        self.speed = 0
         self.elapsed_time = 0
         self.moving_time = self.set_moving_time()
         self.shooting_time = self.set_shooting_time()
@@ -62,8 +63,8 @@ class Agent(object):
 
     def move_forward(self, tank):
         """ Tanks move forward. """
-        speed = 0.1 + random.uniform(0, 0.9) # choose speed value between 
-        command = Command(tank.index, speed, 0, False)
+        self.speed = 0.1 + random.uniform(0, 0.9) # choose speed value between 
+        command = Command(tank.index, self.speed, 0, False)
         self.commands.append(command)
 
     def stop(self, tank):
@@ -72,13 +73,25 @@ class Agent(object):
 
     def change_angle(self, tank):
         """ Turn left about 60 degrees """
-        command = Command(tank.index, 0, 1, False)
+        command = Command(tank.index, 1, self.get_60_degrees(), False)
         self.commands.append(command)
     
+    def get_60_degrees(self):
+        """ Rotate 60 degrees to the left """
+        return 2 * self.normalize_angle(math.pi/3)
+                
     def shoot(self, tank):
         command = Command(tank.index, 0, 0, True)
         self.commands.append(command)
     
+    def normalize_angle(self, angle):
+        """Make any angle be between +/- pi."""
+        angle -= 2 * math.pi * int (angle / (2 * math.pi))
+        if angle <= -math.pi:
+            angle += 2 * math.pi
+        elif angle > math.pi:
+            angle -= 2 * math.pi
+        return angle
 
 def main():
     # Process CLI arguments.
@@ -113,7 +126,7 @@ def main():
                 agent.elapsed_time = time.time()
             if time_diff > agent.moving_time:
                 print "Turning 60 degrees." 
-                if time_diff < agent.moving_time + 0.83:
+                if time_diff < agent.moving_time + 1.5:
                     agent.tick(time_diff, True, False)
                 else:
                     agent.moving_time = agent.set_moving_time()
