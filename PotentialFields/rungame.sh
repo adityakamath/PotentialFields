@@ -6,8 +6,9 @@ sleep 2
 
 #src/compiled/really_dumb_agent.pyc localhost 50100 &
 
-#pypy src/really_dumb_agent.py localhost 50100 &
+pypy src/really_dumb_agent.py localhost 50103 &
 pypy src/attractive_field_agent.py localhost 50101 &
+#pypy src/pfagent.py localhost 50101 &
 #pypy src/really_dumb_agent.py localhost 50102 &
 #pypy src/really_dumb_agent.py localhost 50103 &
 #python src/agent0.py localhost 50101 &

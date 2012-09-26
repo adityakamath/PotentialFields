@@ -21,7 +21,7 @@ class Agent(object):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
-        self.attractive_s = 10
+        self.s = 10
         self.attractive_alpha = 1
         self.repulsive_radius = 10
         #self.elapsed_time = 0
@@ -67,7 +67,8 @@ class Agent(object):
         angle, delta_x, delta_y = self.compute_attractive_vectors(tank) # compute the strongest attractive vector and the target flag
         relative_angle = self.normalize_angle(angle - tank.angle)
         print "relative angle: %f" % relative_angle
-        command = Command(tank.index, 1, 2*relative_angle, False)
+        print "delta_x: %f \t delta_y: %f" % (delta_x, delta_y)
+        command = Command(tank.index, 1, 2*relative_angle, True)
         self.commands.append(command)
         
     def compute_attractive_vectors(self, tank):
@@ -77,7 +78,7 @@ class Agent(object):
         best_flag = None
 
         for flag in self.flags:
-            if flag.color != self.constants['team']:
+            if flag.color != self.constants['team'] and flag.poss_color != self.constants['team']:
                 d = (flag.x - tank.x)**2 + (flag.x - tank.y)**2 # get distance between tank and flag
                 if d < min_d:
                     min_d = d
@@ -86,8 +87,12 @@ class Agent(object):
         #print "color: %s \t d: %f" % (best_flag.color, d)
                     
         theta = math.atan2(best_flag.y-tank.y, best_flag.x-tank.x) # compute the angle between tank and flag
-        delta_x = self.attractive_alpha * self.attractive_s * min_d * math.cos(theta)
-        delta_y = self.attractive_alpha * self.attractive_s * min_d * math.sin(theta)
+        if min_d >= 0 and d <= self.s:
+            delta_x = self.attractive_alpha * self.s * min_d * math.cos(theta)
+            delta_y = self.attractive_alpha * self.s * min_d * math.sin(theta)
+        elif min_d > self.s:
+            delta_x = self.attractive_alpha * self.s * math.cos(theta)
+            delta_y = self.attractive_alpha * self.s * math.sin(theta)
                 
 #        for flag in self.flags:
 #            if flag.color != self.constants['team']:
