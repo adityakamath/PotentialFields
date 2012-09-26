@@ -21,6 +21,9 @@ class Agent(object):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
+        self.attractive_s = 10
+        self.attractive_alpha = 1
+        self.repulsive_radius = 10
         #self.elapsed_time = 0
         #self.moving_time = self.set_moving_time()
         #self.shooting_time = self.set_shooting_time()
@@ -61,47 +64,52 @@ class Agent(object):
         
     def get_direction(self, tank):
         """ Get the moving direction based on the strongest attractive vector """
-        angle, vector = self.compute_attractive_vectors(tank) # compute the strongest attractive vector and the target flag
+        angle, delta_x, delta_y = self.compute_attractive_vectors(tank) # compute the strongest attractive vector and the target flag
         relative_angle = self.normalize_angle(angle - tank.angle)
         print "relative angle: %f" % relative_angle
-        command = Command(tank.index, 1, relative_angle, False)
+        command = Command(tank.index, 1, 2*relative_angle, False)
         self.commands.append(command)
         
     def compute_attractive_vectors(self, tank):
         """ computer the strongest attractive vector and return the direction and the angle """
         
-        delta_x = delta_y = 0
-        min_vector = float("inf")
-        best_theta = 0
+        min_d = float("inf")
         best_flag = None
 
-#        colors = []
-#        for flag in self.flags:
-#            colors.append(flag.color)
-#        
-#        print "flags: %s" % str(colors)
-        
         for flag in self.flags:
             if flag.color != self.constants['team']:
-                d = math.sqrt((flag.x - tank.x)**2 + (flag.x - tank.y)**2) # get distance between tank and flag
-                if d == 0: # if tank reaches the flag
-                    delta_x = delta_y = 0
-                    break
-                else:              
-                    theta = math.atan2(tank.y-flag.y, tank.x-flag.x) # compute the angle between tank and flag
-                    cur_delta_x = d * math.cos(theta)
-                    cur_delta_y = d * math.sin(theta)
-                    cur_vector = cur_delta_x**2 + cur_delta_y ** 2
-                    print "color: %s \t cur_vector: %f" % (flag.color, cur_vector)
-                    if min_vector > cur_vector:
-                        delta_x = cur_delta_x
-                        delta_y = cur_delta_y
-                        best_theta = theta
-                        min_vector = cur_vector
-                        best_flag = flag
+                d = (flag.x - tank.x)**2 + (flag.x - tank.y)**2 # get distance between tank and flag
+                if d < min_d:
+                    min_d = d
+                    best_flag = flag
+
+        #print "color: %s \t d: %f" % (best_flag.color, d)
+                    
+        theta = math.atan2(best_flag.y-tank.y, best_flag.x-tank.x) # compute the angle between tank and flag
+        delta_x = self.attractive_alpha * self.attractive_s * min_d * math.cos(theta)
+        delta_y = self.attractive_alpha * self.attractive_s * min_d * math.sin(theta)
+                
+#        for flag in self.flags:
+#            if flag.color != self.constants['team']:
+#                d = math.sqrt((flag.x - tank.x)**2 + (flag.x - tank.y)**2) # get distance between tank and flag
+#                if d == 0: # if tank reaches the flag
+#                    delta_x = delta_y = 0
+#                    break
+#                else:              
+#                    theta = math.atan2(flag.y-tank.y, flag.x-tank.x) # compute the angle between tank and flag
+#                    cur_delta_x = d * math.cos(theta)
+#                    cur_delta_y = d * math.sin(theta)
+#                    cur_vector = cur_delta_x**2 + cur_delta_y ** 2
+#                    print "color: %s \t cur_vector: %f" % (flag.color, cur_vector)
+#                    if max_vector < cur_vector:
+#                        delta_x = cur_delta_x
+#                        delta_y = cur_delta_y
+#                        best_theta = theta
+#                        max_vector = cur_vector
+#                        best_flag = flag
         
-        print "closest flag: %s" % best_flag.color
-        return (theta, math.sqrt(min_vector))
+        #print "closest flag: %s" % best_flag.color
+        return (theta, delta_x, delta_y)
             
     def shoot(self, tank):
         command = Command(tank.index, 0, 0, True)
