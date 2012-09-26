@@ -21,7 +21,7 @@ class Agent(object):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
-        self.repulsive_s = 1
+        self.s = 10
         self.repulsive_beta = 1
         self.speed = 1
         #self.elapsed_time = 0
@@ -65,8 +65,11 @@ class Agent(object):
     def get_direction(self, tank):
         """ Get the moving direction based on the strongest attractive vector """
         angle, delta_x, delta_y = self.compute_repulsive_vectors(tank) # compute the strongest attractive vector and the target flag
-        relative_angle = self.normalize_angle(angle - tank.angle)
-        print "relative angle: %f" % relative_angle
+        relative_angle =0
+        #print "Angle: %f" % angle
+        if angle != 0:
+            relative_angle = self.normalize_angle(tank.angle - angle)            
+            print "relative angle: %f" % relative_angle
         command = Command(tank.index, 1, relative_angle, False)
         self.commands.append(command)
         
@@ -80,16 +83,21 @@ class Agent(object):
 
         obstacles = self.bzrc.get_obstacles();
         for obstacle in obstacles:
-            ox = abs(obstacle[2][0]- obstacle[0][0])/2
-            oy = abs(obstacle[2][1]- obstacle[0][1])/2
-            r = math.sqrt((ox - obstacle[2][0])**2 + (oy - obstacle[2][1])**2)
+            ox = (obstacle[2][0]+ obstacle[0][0])/2
+            oy = (obstacle[2][1]+ obstacle[0][1])/2
+            r = math.sqrt((obstacle[0][0] - obstacle[2][0])**2 + (obstacle[0][1] - obstacle[2][1])**2)/2
             d = math.sqrt((ox - tank.x)**2 + (oy - tank.y)**2)
-            if d < (self.repulsive_s + r):
+            #print "obstacle: %s ox: %f oy: %f" % (obstacle, ox, oy)
+            if d < (self.s + r):
                 theta = math.atan2(oy-tank.y, ox-tank.x) # compute the angle between tank and flag
-                delta_x = -self.repulsive_beta * (self.repulsive_s + r - d)* math.cos(theta)
-                delta_y = -self.repulsive_beta * (self.repulsive_s + r - d)*math.sin(theta)
-            #obstacle.x obstacle.y // Obstacle ordered [x1,y1,x2,y2....
-                
+                print "Theta: %f" % theta
+                delta_x = -self.repulsive_beta * (self.s + r - d)* math.cos(theta)
+                delta_y = -self.repulsive_beta * (self.s + r - d)*math.sin(theta)
+            elif d < r:
+                theta = math.atan2(oy-tank.y, ox-tank.x)
+                print "Theta: %f" % theta
+                delta_x = -math.cos(theta)*float("inf")
+                delta_y = -math.sin(theta)*float("inf")                
         return (theta, delta_x, delta_y)
         #print "closest flag: %s" % best_flag.color
         #return (theta, math.sqrt(min_vector))
