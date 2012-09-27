@@ -44,7 +44,7 @@ FILENAME = 'fields.gpi'
 # Size of the world (one of the "constants" in bzflag):
 WORLDSIZE = 800
 # How many samples to take along each dimension:
-SAMPLES = 25
+SAMPLES = 50
 # Change spacing by changing the relative length of the vectors.  It looks
 # like scaling by 0.75 is pretty good, but this is adjustable:
 VEC_LEN = 0.75 * WORLDSIZE / SAMPLES
@@ -88,7 +88,7 @@ def generate_field_function(scale, fieldtype):
      
         delta_x = delta_y = 0
         
-        s= 10
+        s= 50
         alpha = 1
         
         d = (closest_flag[0] - x)**2 + (closest_flag[1] - y)**2 # get distance between tank and flag
@@ -100,16 +100,16 @@ def generate_field_function(scale, fieldtype):
         elif d > s:
             delta_x = alpha * s * math.cos(theta)
             delta_y = alpha * s * math.sin(theta)
+        
+        
             
-        return delta_x, delta_y
+        return delta_x/s, delta_y/s
     
     def repulsive(x, y):
         delta_x = delta_y = 0
-        min_vector = float("inf")
         theta = 0
-        best_flag = None
-        s = 10
-        beta = 1
+        s = 100
+        beta = .5
 
         for obstacle in OBSTACLES:
             ox = (obstacle[2][0]+ obstacle[0][0])/2
@@ -117,18 +117,37 @@ def generate_field_function(scale, fieldtype):
             r = math.sqrt((obstacle[0][0] - obstacle[2][0])**2 + (obstacle[0][1] - obstacle[2][1])**2)/2
             d = math.sqrt((ox - x)**2 + (oy - y)**2)
             
+            sign = lambda x : cmp(x, 0)
+            
             if d < (s + r):
                 theta = math.atan2(oy-y, ox-x) # compute the angle between tank and flag
                 if d < r:
-                    delta_x = -math.cos(theta)*float("inf")
-                    delta_y = -math.sin(theta)*float("inf")
+                    delta_x -= sign(math.cos(theta))*1000000
+                    delta_y -= sign(math.sin(theta))*1000000
                 else:
-                    delta_x = -beta * (s + r - d)* math.cos(theta)
-                    delta_y = -beta * (s + r - d)*math.sin(theta)
+                    delta_x -= beta * (s + r - d)* math.cos(theta)
+                    delta_y -= beta * (s + r - d)*math.sin(theta)
 
-        return delta_x, delta_y
-
+        return delta_x/s, delta_y/s
+    
+    
+    def combination(x, y):
         
+        attractive_x, attractive_y = attractive(x, y)
+        repulsive_x, repulsive_y = repulsive(x, y)
+
+        #print "attractive: dx: %f, dy: %f, vec: %f" % (attractive_x, attractive_y, math.sqrt(attractive_x**2 + attractive_y**2))
+        #print "repulsive: dx: %f, dy: %f, vec: %f" % (repulsive_x, repulsive_y, math.sqrt(repulsive_x**2 + repulsive_y**2))
+        #print "combination: dx: %f, dy: %f, vec: %f" % (attractive_x+repulsive_x, attractive_y+repulsive_y, math.sqrt((attractive_x+repulsive_x)**2 + (attractive_y+repulsive_y)**2))
+        #print
+        
+        if abs(repulsive_x) > 500000 and abs(repulsive_y) > 500000:
+            repulsive_x = 2
+            repulsive_y = 2
+        
+        return attractive_x+repulsive_x, attractive_y+repulsive_y 
+        
+    
     
     if fieldtype == "attractive":
         function = attractive
@@ -136,8 +155,8 @@ def generate_field_function(scale, fieldtype):
         function = repulsive
 #    elif fieldtype == "tangential":
 #        function = tangential
-#    else:
-#        function = combination
+    else:
+        function = combination
                 
     #        sqnorm = (x**2 + y**2)
     #        if sqnorm == 0.0:
@@ -149,7 +168,7 @@ def generate_field_function(scale, fieldtype):
 # this is the four-ls world obstacles
 
 
-
+type = "combination"
 
 
 
@@ -227,7 +246,7 @@ def plot_field(function):
 outfile = open(FILENAME, 'w')
 print >>outfile, gnuplot_header(-WORLDSIZE / 2, WORLDSIZE / 2)
 print >>outfile, draw_obstacles(OBSTACLES)
-field_function = generate_field_function(150)
+field_function = generate_field_function(150, "repulsive")
 print >>outfile, plot_field(field_function)
 
 
@@ -253,6 +272,6 @@ gp.write(draw_obstacles(OBSTACLES))
 #    field_function = generate_field_function(scale)
 #    gp.write(plot_field(field_function))
 
-field_function = generate_field_function(150, "repulsive")
+field_function = generate_field_function(150, type)
 gp.write(plot_field(field_function))
 

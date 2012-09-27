@@ -40,12 +40,12 @@ class Agent(object):
 
         self.commands = []
 
-        print "tank position: (%f, %f)" % (mytanks[0].x, mytanks[0].y)
+        #print "tank position: (%f, %f)" % (mytanks[0].x, mytanks[0].y)
         flag = None
         for flag in self.flags:
             if flag.color == 'blue':
                 break
-        print "closest flag position: (%f, %f)" % (flag.x, flag.y)
+        #print "closest flag position: (%f, %f)" % (flag.x, flag.y)
         
         for tank in self.mytanks:
             self.get_direction(tank)
@@ -71,10 +71,13 @@ class Agent(object):
         
     def get_direction(self, tank):
         """ Get the moving direction based on the strongest attractive vector """
-        angle, delta_x, delta_y = self.compute_attractive_vectors(tank) # compute the strongest attractive vector and the target flag
+        delta_x, delta_y = self.compute_attractive_vectors(tank) # compute the strongest attractive vector and the target flag
+        angle = math.atan2(delta_y, delta_x)
         relative_angle = self.normalize_angle(angle - tank.angle)
-        print "relative angle: %f" % relative_angle
-        print "delta_x: %f \t delta_y: %f" % (delta_x, delta_y)
+        #print "relative angle: %f" % relative_angle
+        #print "delta_x: %f \t delta_y: %f" % (delta_x, delta_y)
+        if tank.index == 1:        
+            print "delta_x: %f \t delta_y: %f \t angle: %f \t tank angle: %f \t relative angle: %f" % (delta_x, delta_y, angle, tank.angle, relative_angle)
         
         command = Command(tank.index, 1, 2*relative_angle, True)
         self.commands.append(command)
@@ -92,8 +95,6 @@ class Agent(object):
                     min_d = d
                     best_flag = flag
 
-        #print "color: %s \t d: %f" % (best_flag.color, d)
-                    
         theta = math.atan2(best_flag.y-tank.y, best_flag.x-tank.x) # compute the angle between tank and flag
         if min_d >= 0 and d <= self.s:
             delta_x = self.attractive_alpha * self.s * min_d * math.cos(theta)
@@ -102,27 +103,7 @@ class Agent(object):
             delta_x = self.attractive_alpha * self.s * math.cos(theta)
             delta_y = self.attractive_alpha * self.s * math.sin(theta)
                 
-#        for flag in self.flags:
-#            if flag.color != self.constants['team']:
-#                d = math.sqrt((flag.x - tank.x)**2 + (flag.x - tank.y)**2) # get distance between tank and flag
-#                if d == 0: # if tank reaches the flag
-#                    delta_x = delta_y = 0
-#                    break
-#                else:              
-#                    theta = math.atan2(flag.y-tank.y, flag.x-tank.x) # compute the angle between tank and flag
-#                    cur_delta_x = d * math.cos(theta)
-#                    cur_delta_y = d * math.sin(theta)
-#                    cur_vector = cur_delta_x**2 + cur_delta_y ** 2
-#                    print "color: %s \t cur_vector: %f" % (flag.color, cur_vector)
-#                    if max_vector < cur_vector:
-#                        delta_x = cur_delta_x
-#                        delta_y = cur_delta_y
-#                        best_theta = theta
-#                        max_vector = cur_vector
-#                        best_flag = flag
-        
-        #print "closest flag: %s" % best_flag.color
-        return (theta, delta_x, delta_y)
+        return (delta_x, delta_y)
             
     def shoot(self, tank):
         command = Command(tank.index, 0, 0, True)
