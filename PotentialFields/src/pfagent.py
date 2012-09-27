@@ -2,9 +2,6 @@
 Created on Sep 25, 2012
 
 @author: hitokazu
-
-Agent only with attractive potential fields
-This will be merged with agents with other potential fields later
 '''
 
 import sys
@@ -21,9 +18,12 @@ class Agent(object):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
-        self.s = 10
+        self.attractive_s= 5
         self.attractive_alpha = 1
-        self.repulsive_radius = 10
+        self.repulsive_s = 10
+        #self.repulsive_radius = 10
+        self.repulsive_beta = 1
+        self.speed = 1
         #self.elapsed_time = 0
         #self.moving_time = self.set_moving_time()
         #self.shooting_time = self.set_shooting_time()
@@ -39,51 +39,76 @@ class Agent(object):
                         self.constants['team']]
 
         self.commands = []
-
-        print "tank position: (%f, %f)" % (mytanks[0].x, mytanks[0].y)
-        flag = None
-        for flag in self.flags:
-            if flag.color == 'blue':
-                break
-        print "closest flag position: (%f, %f)" % (flag.x, flag.y)
         
         for tank in self.mytanks:
             self.get_direction(tank)
         
-#        if shoot == True:
-#            if angle == True:
-#                for tank in mytanks:
-#                    self.shoot(tank)
-#                    self.change_angle(tank)
-#            else:
-#                for tank in mytanks:
-#                    self.shoot(tank)
-#                    self.move_forward(tank)
-#        else:
-#            if angle == True:
-#                for tank in mytanks:
-#                    self.change_angle(tank)
-#            else:
-#                for tank in mytanks:
-#                    self.move_forward(tank)
-
         results = self.bzrc.do_commands(self.commands)
         
     def get_direction(self, tank):
         """ Get the moving direction based on the strongest attractive vector """
-        angle, delta_x, delta_y = self.compute_attractive_vectors(tank) # compute the strongest attractive vector and the target flag
-        relative_angle = self.normalize_angle(angle - tank.angle)
-        print "relative angle: %f" % relative_angle
-        print "delta_x: %f \t delta_y: %f" % (delta_x, delta_y)
+        angle, attractive_delta_x, attractive_delta_y = self.compute_attractive_vectors(tank) # compute the strongest attractive vector and the target flag
+        angle, repulsive_delta_x, repulsive_delta_y = self.compute_repulsive_vectors(tank)
         
-        command = Command(tank.index, 1, 2*relative_angle, True)
+        print "attractive x: %f \t repulsive x: %f" % (attractive_delta_x, repulsive_delta_x)
+        print "attractive y: %f \t repulsive y: %f" % (attractive_delta_y, repulsive_delta_y)
+        
+        delta_x = attractive_delta_x + repulsive_delta_x
+        delta_y = attractive_delta_y + repulsive_delta_y
+        
+        print "combined delta_x: %f \t combined delta_y: %f" % (delta_x, delta_y)
+        
+        angle = math.atan2(delta_y, delta_x)
+        
+        relative_angle = self.normalize_angle(angle - tank.angle)
+        #print "relative angle: %f" % relative_angle
+        
+        command = Command(tank.index, 1, 2*relative_angle, False)
         self.commands.append(command)
+
+    def compute_repulsive_vectors(self, tank):
+        """ computer the strongest attractive vector and return the direction and the angle """
+        
+        delta_x = delta_y = 0
+        theta = 0
+        Infinity = float("inf")
+        d = 0
+        obs_radius = 10
+
+        sign = lambda x : cmp(x, 0)
+
+        obstacles = self.bzrc.get_obstacles();
+        for obstacle in obstacles:
+            # 1. get vertices of obstacle and give the radius of 10 for example
+            # 2. calculate distance between tank and obstacle
+            # 3. if the vertices are in the range of spread s:
+                # a. calculate theta = atan(yo-y, xp-x) 
+                # b. if d < r, then delta_x = -sign(cos(theta))infinity, delta_y = -sign(cos(theta))infinity
+                # c. if r <= d <= s + r, then delta_x = -beta(s + r - d)cos(theta), delta_y = -beta(s+r-d)sin(theta)
+                # d. if d > s + r delta_x = delta_y = 0
+            
+            for vertex in obstacle:
+                d = math.sqrt((vertex[0]-tank.x)**2 + (vertex[1]-tank.x)**2)
+                if d > obs_radius + self.repulsive_s:
+                    continue
+                else:
+                    theta = math.atan2(vertex[1]-tank.y, vertex[0]-tank.x)
+                    if obs_radius <= d and d <= self.repulsive_s + obs_radius:
+                        delta_x += -self.repulsive_beta * (self.repulsive_s + obs_radius - d) * math.cos(theta)
+                        delta_y += -self.repulsive_beta * (self.repulsive_s + obs_radius - d) * math.sin(theta)
+                    elif d < obs_radius:
+                        delta_x += -1 * sign(math.cos(theta)) * Infinity
+                        delta_y += -1 * sign(math.sin(theta)) * Infinity
+                    
+        return (theta, delta_x, delta_y)
         
     def compute_attractive_vectors(self, tank):
         """ computer the strongest attractive vector and return the direction and the angle """
         
         min_d = float("inf")
         best_flag = None
+
+        delta_x = delta_y = 0
 
         for flag in self.flags:
             if flag.color != self.constants['team'] and flag.poss_color != self.constants['team']:
@@ -93,35 +118,18 @@ class Agent(object):
                     best_flag = flag
 
         #print "color: %s \t d: %f" % (best_flag.color, d)
+
+        
                     
         theta = math.atan2(best_flag.y-tank.y, best_flag.x-tank.x) # compute the angle between tank and flag
-        if min_d >= 0 and d <= self.s:
-            delta_x = self.attractive_alpha * self.s * min_d * math.cos(theta)
-            delta_y = self.attractive_alpha * self.s * min_d * math.sin(theta)
-        elif min_d > self.s:
-            delta_x = self.attractive_alpha * self.s * math.cos(theta)
-            delta_y = self.attractive_alpha * self.s * math.sin(theta)
-                
-#        for flag in self.flags:
-#            if flag.color != self.constants['team']:
-#                d = math.sqrt((flag.x - tank.x)**2 + (flag.x - tank.y)**2) # get distance between tank and flag
-#                if d == 0: # if tank reaches the flag
-#                    delta_x = delta_y = 0
-#                    break
-#                else:              
-#                    theta = math.atan2(flag.y-tank.y, flag.x-tank.x) # compute the angle between tank and flag
-#                    cur_delta_x = d * math.cos(theta)
-#                    cur_delta_y = d * math.sin(theta)
-#                    cur_vector = cur_delta_x**2 + cur_delta_y ** 2
-#                    print "color: %s \t cur_vector: %f" % (flag.color, cur_vector)
-#                    if max_vector < cur_vector:
-#                        delta_x = cur_delta_x
-#                        delta_y = cur_delta_y
-#                        best_theta = theta
-#                        max_vector = cur_vector
-#                        best_flag = flag
-        
-        #print "closest flag: %s" % best_flag.color
+        if min_d >= 0 and d <= self.attractive_s:
+            delta_x = self.attractive_alpha * self.attractive_s * min_d * math.cos(theta)
+            delta_y = self.attractive_alpha * self.attractive_s * min_d * math.sin(theta)
+        elif min_d > self.attractive_s:
+            delta_x = self.attractive_alpha * self.attractive_s * math.cos(theta)
+            delta_y = self.attractive_alpha * self.attractive_s * math.sin(theta)
+            
+         
         return (theta, delta_x, delta_y)
             
     def shoot(self, tank):
@@ -133,7 +141,7 @@ class Agent(object):
         target_angle = math.atan2(target_y - tank.y,
                                   target_x - tank.x)
         relative_angle = self.normalize_angle(target_angle - tank.angle)
-        command = Command(tank.index, 1, 2 * relative_angle, True)
+        command = Command(tank.index, self.speed, 2 * relative_angle, True)
         self.commands.append(command)
     
     def normalize_angle(self, angle):
