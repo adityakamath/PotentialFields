@@ -68,7 +68,7 @@ class Agent(object):
         relative_angle = self.normalize_angle(angle - tank.angle)
         print "relative angle: %f" % relative_angle
         print "delta_x: %f \t delta_y: %f" % (delta_x, delta_y)
-        command = Command(tank.index, 1, 2*relative_angle, True)
+        command = Command(tank.index, 1, 2*relative_angle, False)
         self.commands.append(command)
         
     def compute_attractive_vectors(self, tank):
