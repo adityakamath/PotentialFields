@@ -19,13 +19,15 @@ class Agent(object):
         self.constants = self.bzrc.get_constants()
         self.commands = []
         self.attractive_s = 10
-        self.attractive_alpha = 1
-        self.repulsive_s = 30
+        self.attractive_alpha = 0.7
+        self.repulsive_s = 50
         self.repulsive_beta = 1
+        self.repulsive_max = 2
         self.speed = 1
         self.base_radius = 3
         self.obstacles = self.bzrc.get_obstacles()
         self.infinity = 10000000
+        self.fire = False
         flags = self.bzrc.get_flags()
         for flag in flags:
             if flag.color == self.constants['team']:
@@ -43,6 +45,8 @@ class Agent(object):
                         self.constants['team']]
 
         self.commands = []
+
+        #print "flag.poss_color: %s" % flags[0].poss_color
         
         for tank in self.mytanks:
             self.get_direction(tank)
@@ -59,16 +63,47 @@ class Agent(object):
         
         return delta_x, delta_y
         
-    def create_move_forward_command(self, tank, delta_x, delta_y):
+    def create_move_forward_command(self, tank, delta_x, delta_y, accelx=1, accely=1):
         """ produce move forward command """
         angle = math.atan2(delta_y, delta_x)
         relative_angle = self.normalize_angle(angle - tank.angle)
-        return Command(tank.index, 1, 2*relative_angle, True)
+        
+        command = Command(tank.index, self.speed, 2*relative_angle, self.fire)
+
+        return command
+    
+    def compute_acceleration(self, delta, attractive):
+        sign = lambda x : cmp(x, 0)
+        
+        if sign(delta) != sign(attractive):
+            accel = delta / attractive
+        else:
+            if delta < 0 and attractive < 0:
+                accel = -1 * delta / attractive
+            else:
+                accel = delta / attractive
+                
+        return accel
+        
+        
+    def compute_accelx_and_accely(self, delta_x, attractive_x, delta_y, attractive_y):
+        """ calculate acceleration for x and y axes """
+                
+        accelx = self.compute_acceleration(delta_x, attractive_x)
+        accely = self.compute_acceleration(delta_y, attractive_y)
+        
+        return (accelx, accely)
         
     def get_direction(self, tank):
         """ Get the moving direction based on the combined vector """
         
-        if tank.flag != "-":
+        all_captured = True
+        for flag in self.flags:
+            if flag.poss_color != self.constants['team']:
+                all_captured = False
+                break
+        
+        if tank.flag != "-" or all_captured == True:
             self.go_back(tank)
         else:
             attractive_delta_x, attractive_delta_y = self.compute_attractive_vectors(tank) # compute the strongest attractive vector and the target flag
@@ -77,14 +112,20 @@ class Agent(object):
             delta_x, delta_y = self.combine_vectors([attractive_delta_x, repulsive_delta_x], \
                                                     [attractive_delta_y, repulsive_delta_y]) 
     
-            if tank.index == 1:        
-                #print "before: %f \t after: %f" % (attractive_delta_x, delta_x)
-                print "attractive_x: %f \t attractive_y: %f" % (attractive_delta_x, attractive_delta_y)
-                print "repulsive_x: %f \t\t repulsive_y: %f" % (repulsive_delta_x, repulsive_delta_y)
-                print "delta_x: %f \t\t delta_y: %f" % (delta_x, delta_y)
-                print
+#            if tank.index == 1:        
+#                #print "before: %f \t after: %f" % (attractive_delta_x, delta_x)
+#                print "attractive_x: %f \t attractive_y: %f" % (attractive_delta_x, attractive_delta_y)
+#                print "repulsive_x: %f \t\t repulsive_y: %f" % (repulsive_delta_x, repulsive_delta_y)
+#                print "delta_x: %f \t\t delta_y: %f" % (delta_x, delta_y)
+#                print
     
+            #accelx, accely = self.compute_accelx_and_accely(delta_x, attractive_delta_x, delta_y, attractive_delta_y)
             command = self.create_move_forward_command(tank, delta_x, delta_y)
+    
+#            if repulsive_delta_x == self.repulsive_max or repulsive_delta_y == self.repulsive_max:
+#                command = self.create_move_forward_command(tank, delta_x, delta_y)
+#            else:
+#                command = self.create_move_forward_command(tank, delta_x, delta_y)
             self.commands.append(command)
 
     def compute_attractive_x_and_y(self, flag, d, tank, r):
@@ -92,8 +133,11 @@ class Agent(object):
             d = math.sqrt((flag.x - tank.x)**2 + (flag.y-tank.y)**2)
         else:
             d = math.sqrt(d)
-            
-        theta = math.atan2(flag.y-tank.y, flag.x-tank.x)
+        
+        if tank.status == "alive" and flag != None and flag.poss_color == "none":    
+            theta = math.atan2(flag.y-tank.y, flag.x-tank.x)
+        else:
+            theta = 0
         if d < r:
             delta_x = delta_y = 0
         else:
@@ -116,24 +160,26 @@ class Agent(object):
         min_d = self.infinity
         best_flag = None
 
-        if tank.index == 1:
-            print "tank.x: %f \t tank.y: %f" %(tank.x, tank.y)
+#        if tank.index == 1:
+#            print "tank.x: %f \t tank.y: %f" %(tank.x, tank.y)
 
 
         for flag in self.flags:
             if flag.color != self.constants['team'] and flag.poss_color != self.constants['team']:
                 d = ((flag.x - tank.x)**2 + (flag.y - tank.y)**2) # get distance between tank and flag
-                if tank.index == 1:
-                    print "flag: %s \t flag.x: %f \t flag.y: %f \t d: %f" % \
-                    (flag.color, flag.x, flag.y, d)
+#                if tank.index == 1:
+#                    print "flag: %s \t flag.x: %f \t flag.y: %f \t d: %f" % \
+#                    (flag.color, flag.x, flag.y, d)
                 if d < min_d:
                     min_d = d
                     best_flag = flag
 
-        if tank.index == 1:
-            print "closest flag: %s" % best_flag.color
+#        if tank.index == 1:
+#            print "closest flag: %s" % best_flag.color
 
-        return self.compute_attractive_x_and_y(best_flag, min_d, tank, 0)
+        delta_x, delta_y = self.compute_attractive_x_and_y(best_flag, min_d, tank, 0)
+
+        return delta_x/self.attractive_s, delta_y/self.attractive_s
     
     def remove_tank(self, tank):
         """ remove tank from self.mytank """
@@ -146,26 +192,29 @@ class Agent(object):
         
         if d <= self.base_radius:
             command = Command(tank.index, 0, 0, False)
-            self.remove_tank(tank)
+            #self.remove_tank(tank)
             self.commands.append(command)
         else:
             a_d_x, a_d_y = self.compute_attractive_x_and_y(self.myflag, 0, tank, \
                                                            self.base_radius)
+            
             r_d_x, r_d_y = self.compute_repulsive_vectors(tank)
-            delta_x, delta_y = self.combine_vectors([a_d_x, r_d_x], [a_d_y, r_d_y])
+            delta_x, delta_y = self.combine_vectors([a_d_x, r_d_x], \
+                                                    [a_d_y, r_d_y])
             command = self.create_move_forward_command(tank, delta_x, delta_y)
             self.commands.append(command)
 
     def compute_repulsive_vectors(self, tank):
-        """ computer the strongest attractive vector and return the direction and the angle """
+        """ computer the strongest repulsive vector and return the direction and the angle """
         delta_x = delta_y = 0
         theta = 0
-
-        #obstacles = self.bzrc.get_obstacles()
+        
+        #obstacles = self.bzrc.get_obstacles() # this is very time consuming process. Do it in the constructor.
         for obstacle in self.obstacles:
             ox = (obstacle[2][0]+ obstacle[0][0])/2
             oy = (obstacle[2][1]+ obstacle[0][1])/2
-            r = math.sqrt((obstacle[0][0] - obstacle[2][0])**2 + (obstacle[0][1] - obstacle[2][1])**2)/2 + 1
+            r = math.sqrt((ox - obstacle[2][0])**2 + (oy - obstacle[2][1])**2)
+            #r = math.sqrt((obstacle[0][0] - obstacle[2][0])**2 + (obstacle[0][1] - obstacle[2][1])**2)/2
             d = math.sqrt((ox - tank.x)**2 + (oy - tank.y)**2)
 
             sign = lambda x : cmp(x, 0)
@@ -175,9 +224,15 @@ class Agent(object):
                 if d < r:
                     delta_x -= sign(math.cos(theta)) * self.infinity
                     delta_y -= sign(math.sin(theta)) * self.infinity
-                else:
+                elif r <= d and d <= self.repulsive_s + r: 
                     delta_x -= self.repulsive_beta * (self.repulsive_s + r - d)* math.cos(theta)
                     delta_y -= self.repulsive_beta * (self.repulsive_s + r - d)*math.sin(theta)
+
+        if delta_x > self.infinity and delta_y > self.infinity:
+            delta_x = delta_y = self.repulsive_max
+        else:
+            delta_x /= self.repulsive_s
+            delta_y /= self.repulsive_s
 
         return (delta_x, delta_y)
                 
@@ -225,6 +280,7 @@ def main():
     try:
         while True: 
             agent.tick(time_diff)
+            #print "hi"
     except KeyboardInterrupt:
         print "Exiting due to keyboard interrupt."
         bzrc.close()

@@ -117,21 +117,21 @@ def main():
     # Run the agent
     try:
         while True: 
-            print "Elapsed Time: %f" % time_diff
+            #print "Elapsed Time: %f" % time_diff
             time_diff = time.time() - prev_time
             if time.time() - agent.elapsed_time > agent.shooting_time:
-                print "Shoot!"
+                #print "Shoot!"
                 agent.tick(time_diff, False, True)
                 agent.shooting_time = agent.set_shooting_time()
                 agent.elapsed_time = time.time()
             if time_diff > agent.moving_time:
-                print "Turning 60 degrees." 
+                #print "Turning 60 degrees." 
                 if time_diff < agent.moving_time + 1.5:
                     agent.tick(time_diff, True, False)
                 else:
                     agent.moving_time = agent.set_moving_time()
                     prev_time = time.time()
-                    print "Moving Time: %d" % agent.moving_time
+                    #print "Moving Time: %d" % agent.moving_time
             else:
                 agent.tick(time_diff, False, False)
     except KeyboardInterrupt:

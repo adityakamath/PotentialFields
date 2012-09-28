@@ -114,7 +114,8 @@ def generate_field_function(scale, fieldtype):
         for obstacle in OBSTACLES:
             ox = (obstacle[2][0]+ obstacle[0][0])/2
             oy = (obstacle[2][1]+ obstacle[0][1])/2
-            r = math.sqrt((obstacle[0][0] - obstacle[2][0])**2 + (obstacle[0][1] - obstacle[2][1])**2)/2
+            r = math.sqrt((ox - obstacle[2][0])**2 + (oy - obstacle[2][1])**2)
+            #r = math.sqrt((obstacle[0][0] - obstacle[2][0])**2 + (obstacle[0][1] - obstacle[2][1])**2)/2
             d = math.sqrt((ox - x)**2 + (oy - y)**2)
             
             sign = lambda x : cmp(x, 0)
