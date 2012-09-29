@@ -142,7 +142,7 @@ class Agent(object):
         else:
             d = math.sqrt(d)
         
-        if tank.status == "alive" and flag != None and flag.poss_color == "none":
+        if tank.status == "alive" and flag != None and flag.poss_color != self.constants['team']:
             theta = math.atan2(flag.y-tank.y, flag.x-tank.x)
         else:
             theta = 0
@@ -173,9 +173,9 @@ class Agent(object):
 
 
         for flag in self.flags:
-            if flag.poss_color != self.constants['team']:
-                if self.constants['team'] == 'green':
-                    print "%s flag.poss_color: %s" % (flag.color, flag.poss_color)
+            #if flag.poss_color != self.constants['team']:
+            #    if self.constants['team'] == 'green':
+            #        print "%s flag.poss_color: %s" % (flag.color, flag.poss_color)
             
             if flag.color != self.constants['team'] and flag.poss_color != self.constants['team']:
                 d = ((flag.x - tank.x)**2 + (flag.y - tank.y)**2) # get distance between tank and flag

@@ -31,6 +31,12 @@ class Agent(object):
         self.tangential_clockwise = True
         self.Kp = .1
         self.Kd = .5
+        self.prev = []
+        self.prevgoal = []
+        for tank in self.bzrc.get_mytanks():
+            self.prev.append([0,0])
+            self.prevgoal.append([0,0])
+            
         flags = self.bzrc.get_flags()
         for flag in flags:
             if flag.color == self.constants['team']:
@@ -45,7 +51,9 @@ class Agent(object):
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
         mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
-        self.mytanks = mytanks
+        self.mytanks = []
+        self.mytanks.append(mytanks[0])
+        #self.mytanks = mytanks
         self.othertanks = othertanks
         self.flags = flags
         self.shots = shots
@@ -73,18 +81,27 @@ class Agent(object):
         
     def create_move_forward_command(self, tank, delta_x, delta_y, accelx=1, accely=1):
         """ produce move forward command """
+        
+        sign = lambda x : cmp(x, 0)
+        
         pdx,pdy = self.PDController(tank)
-        if self.constants["team"] == "green" and tank.index == 0:
-            self.reportTankPDValues(tank, pdx, pdy)
         angle = math.atan2(delta_y, delta_x)
         relative_angle = self.normalize_angle(angle - tank.angle, tank)
-        command = Command(tank.index, self.speed, 2*relative_angle, self.fire)
+        if sign(pdx) < 0:
+            print "self.speed: %f" % self.speed
+            command = Command(tank.index, self.speed, 2*relative_angle, self.fire)
+        else:
+            if self.speed > 0.05:
+                self.speed -= 0.01
+            command = Command(tank.index, self.speed, 2*relative_angle, self.fire)
+            
 
         return command
     
     def reportTankPDValues(self,tank,pdx,pdy):
         if tank.status == "alive":
-            print("pdx: %f  pdy: %f" %(pdx,pdy))
+            print("pdx: %d  pdy: %d  prevx: %d  prevy: %d" %(pdx,pdy, self.prev[tank.index][0], \
+                                                       self.prev[tank.index][1]))
             
     
     def compute_acceleration(self, delta, attractive):
@@ -145,15 +162,21 @@ class Agent(object):
 #                command = self.create_move_forward_command(tank, delta_x, delta_y)
             self.commands.append(command)
             
-    def setPrevGoals(self,tank):
-        tank.prevgx = tank.goalx
-        tank.prevgy = tank.goaly
-        tank.prevx = tank.x
-        tank.prevy = tank.y  
+    def setPrev(self,tank):
+        self.prevgoal[tank.index][0] = tank.goalx
+        self.prevgoal[tank.index][1] = tank.goaly
+        self.prev[tank.index][0] = tank.x  
+        self.prev[tank.index][1] = tank.y  
             
     def PDController(self,tank):
-        pdx = self.Kp*(tank.goalx-tank.x)+self.Kd*(((tank.goalx-tank.x)-(tank.prevgx -tank.prevx)))
-        pdy = self.Kp*(tank.goaly-tank.y)+self.Kd*(((tank.goaly-tank.y)-(tank.prevgy -tank.prevy)))
+        pdx = self.Kp*(tank.goalx-tank.x)+self.Kd*(((tank.goalx-tank.x)\
+                                                    -(self.prevgoal[tank.index][0] \
+                                                      - self.prev[tank.index][0])))
+        pdy = self.Kp*(tank.goaly-tank.y)+self.Kd*(((tank.goaly-tank.y)-\
+                                                    (self.prevgoal[tank.index][1] \
+                                                     - self.prev[tank.index][1])))
+        if self.constants["team"] == "green" and tank.index == 0:
+            self.reportTankPDValues(tank, pdx, pdy)
         self.setPrev(tank)
         return (pdx,pdy)
 
@@ -163,7 +186,7 @@ class Agent(object):
         else:
             d = math.sqrt(d)
         
-        if tank.status == "alive" and flag != None and flag.poss_color == "none":
+        if tank.status == "alive" and flag != None and flag.poss_color != self.constants['team']:
             theta = math.atan2(flag.y-tank.y, flag.x-tank.x)
         else:
             theta = 0
@@ -193,9 +216,9 @@ class Agent(object):
 
 
         for flag in self.flags:
-            if flag.poss_color != self.constants['team']:
-                if self.constants['team'] == 'green':
-                    print "%s flag.poss_color: %s" % (flag.color, flag.poss_color)
+            #if flag.poss_color != self.constants['team']:
+                #if self.constants['team'] == 'green':
+                #    print "%s flag.poss_color: %s" % (flag.color, flag.poss_color)
             
             if flag.color != self.constants['team'] and flag.poss_color != self.constants['team']:
                 d = ((flag.x - tank.x)**2 + (flag.y - tank.y)**2) # get distance between tank and flag
