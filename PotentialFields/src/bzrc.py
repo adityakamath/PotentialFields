@@ -242,7 +242,14 @@ class BZRC:
                 tank.vx = float(line[10])
                 tank.vy = float(line[11])
                 tank.angvel = float(line[12])
+                tank.goalx = 0
+                tank.goaly = 0
+                tank.prevx = 0
+                tank.prevy =0
+                tank.prevgx = 0
+                tank.prevgy =0
                 tanks.append(tank)
+
             elif line[0] == 'end':
                 break
             else:
@@ -299,6 +306,7 @@ class BZRC:
             else:
                 self.die_confused('othertank or end', line)
         return bases
+    
 
     def read_constants(self):
         """Get constants."""
