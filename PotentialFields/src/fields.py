@@ -64,6 +64,7 @@ ANIMATION_FRAMES = 20 # this changes the speed of animation
 
 import math
 
+# Four Ls
 OBSTACLES = [((150.0, 150.0), (150.0, 90.0), (90.0, 90.0), (90.0, 150.0)),
                 ((150.0, 210.0), (150.0, 150.0), (90.0, 150.0), (90.0, 210.0)),
                 ((210.0, 150.0), (210.0, 90.0), (150.0, 90.0), (150.0, 150.0)),
@@ -77,6 +78,13 @@ OBSTACLES = [((150.0, 150.0), (150.0, 90.0), (90.0, 90.0), (90.0, 150.0)),
                 ((-90.0, 210.0), (-90.0, 150.0), (-150.0, 150.0), (-150.0, 210.0)),
                 ((-150.0, 150.0), (-150.0, 90.0), (-210.0, 90.0), (-210.0, 150.0)),
                 ((10.0, 60.0), (10.0, -60.0), (-10.0, -60.0), (-10.0, 60.0))]
+
+
+# Rotated Boxes
+OBSTACLES = [((100.0, 42.4264068712), (142.426406871, 0.0), (100.0, -42.4264068712), (57.5735931288, 5.19573633741e-15)),
+             ((-100.0, 42.4264068712), (-57.5735931288, 0.0), (-100.0, -42.4264068712), (-142.426406871, 5.19573633741e-15)),
+             ((2.59786816871e-15, 142.426406871), (42.4264068712, 100.0), (2.59786816871e-15, 57.5735931288), (-42.4264068712, 100.0)),
+             ((2.59786816871e-15, -57.5735931288), (42.4264068712, -100.0), (2.59786816871e-15, -142.426406871), (-42.4264068712, -100.0))]
 
 
 def generate_field_function(scale, fieldtype):
@@ -136,6 +144,7 @@ def generate_field_function(scale, fieldtype):
         
         attractive_x, attractive_y = attractive(x, y)
         repulsive_x, repulsive_y = repulsive(x, y)
+        tangential_x, tangential_y = tangential(x,y)
 
         #print "attractive: dx: %f, dy: %f, vec: %f" % (attractive_x, attractive_y, math.sqrt(attractive_x**2 + attractive_y**2))
         #print "repulsive: dx: %f, dy: %f, vec: %f" % (repulsive_x, repulsive_y, math.sqrt(repulsive_x**2 + repulsive_y**2))
@@ -146,16 +155,49 @@ def generate_field_function(scale, fieldtype):
             repulsive_x = 2
             repulsive_y = 2
         
-        return attractive_x+repulsive_x, attractive_y+repulsive_y 
+        return attractive_x+repulsive_x+tangential_x, attractive_y+repulsive_y+tangential_y 
         
+    def tangential(x, y):
+        """ computer tangential vectors based on repulsive vectors """
+        # 1. call compute_repulsive_vectors(self, tank)
+        # 2. if self.tangential_clockwise = true
+        #        delta_x = delta_y
+        #        delta_y = -delta_x
+        # 3. else (counter_clockwise)
+        #        delta_x = -delta_y
+        #        delta_y = delta_x
+        delta_x = delta_y = 0
+        theta = 0
+        s = 100
+        beta = .5
+
+        for obstacle in OBSTACLES:
+            ox = (obstacle[2][0]+ obstacle[0][0])/2
+            oy = (obstacle[2][1]+ obstacle[0][1])/2
+            r = math.sqrt((ox - obstacle[2][0])**2 + (oy - obstacle[2][1])**2)
+            #r = math.sqrt((obstacle[0][0] - obstacle[2][0])**2 + (obstacle[0][1] - obstacle[2][1])**2)/2
+            d = math.sqrt((ox - x)**2 + (oy - y)**2)
+            
+            sign = lambda x : cmp(x, 0)
+            
+            if d < (s + r):
+                theta = math.atan2(oy-y, ox-x) - math.pi / 2 # compute the angle between tank and flag
+                if d < r:
+                    delta_x -= sign(math.cos(theta))*1000000
+                    delta_y -= sign(math.sin(theta))*1000000
+                else:
+                    delta_x -= beta * (s + r - d)* math.cos(theta)
+                    delta_y -= beta * (s + r - d)*math.sin(theta)
+
+        return delta_x/s, delta_y/s
     
     
     if fieldtype == "attractive":
         function = attractive
     elif fieldtype == "repulsive":
         function = repulsive
-#    elif fieldtype == "tangential":
-#        function = tangential
+    elif fieldtype == "tangential":
+        function = tangential
     else:
         function = combination
                 
@@ -169,8 +211,7 @@ def generate_field_function(scale, fieldtype):
 # this is the four-ls world obstacles
 
 
-type = "combination"
-
+type = "tangential"
 
 
 ########################################################################
@@ -247,7 +288,7 @@ def plot_field(function):
 outfile = open(FILENAME, 'w')
 print >>outfile, gnuplot_header(-WORLDSIZE / 2, WORLDSIZE / 2)
 print >>outfile, draw_obstacles(OBSTACLES)
-field_function = generate_field_function(150, "repulsive")
+field_function = generate_field_function(150, type)
 print >>outfile, plot_field(field_function)
 
 
