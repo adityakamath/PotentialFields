@@ -345,6 +345,18 @@ class BZRC:
         self.read_ack()
         return self.read_bool()
 
+    def accelx(self, index, value):
+        """ Set the desired acceleration to the x axis to the specified value. """
+        self.sendline('accelx %s %s' (index, value))
+        self.read_ack()
+        return self.read_bool()
+
+    def accely(self, index, value):
+        """ Set the desired acceleration to the y axis to the specified value. """
+        self.sendline('accelx %s %s' (index, value))
+        self.read_ack()
+        return self.read_bool()
+
     # Information Requests:
 
     def get_teams(self):
