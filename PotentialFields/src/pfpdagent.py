@@ -30,8 +30,8 @@ class Agent(object):
         self.obstacles = self.bzrc.get_obstacles()
         self.fire = True
         self.tangential_clockwise = True#bool(random.getrandbits(1))
-        self.kp = 0.6
-        self.kd = 0.04
+        self.kp = 0.75
+        self.kd = 0.07
         self.attractive_dx = self.attractive_dy = 0
         self.prev_e_x = 0
         self.prev_e_y = 0
@@ -145,6 +145,12 @@ class Agent(object):
             #print "speed: %.2f" % self.speed
             #print "att. dx: %.2f ax_t: %.2f  new dx: %.2f  att. dy: %.2f  ay_t: %.2f  new dy: %.2f" % (self.attractive_dx, ax_t, new_delta_x, \
             #                                                                                                   self.attractive_dy, ay_t, new_delta_y)
+ 
+#        if abs(e_x) >= 0.9 * self.infinity or abs(e_y) >= 0.9 * self.infinity:
+#            self.speed = self.max_speed *.6
+#        else:
+#            self.speed = self.max_speed
+         
                 
         return (new_delta_x, new_delta_y)
 
@@ -154,11 +160,22 @@ class Agent(object):
         target_sign = sign(target)
         error_sign =sign(error)
         
-        if target_sign != error_sign:
-            new_delta = delta + -1 * (target * error)
-        else:
-            new_delta = delta + (target * error)
+        new_delta = delta + error
         
+#        if target_sign != error_sign:
+#            f = -1 * (target * error)
+#            if delta < f:
+#                new_delta = delta - f
+#            else:
+#                new_delta = delta + f
+#        else:
+#            f = target * error
+#            #new_delta = delta + (target * error)
+#            if delta < f/2:
+#                new_delta = delta - f
+#            else:
+#                new_delta = delta + f
+
         return new_delta
 
     def compute_attractive_x_and_y(self, flag, d, tank, r):
