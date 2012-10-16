@@ -9,11 +9,12 @@ echo "working"
 
 #src/compiled/really_dumb_agent.pyc localhost 50100 &
 
-pypy src/pfpdagent.py localhost 50100 &
-#pypy src/pfagent.py localhost 50100 &
-pypy src/pfpdagent.py localhost 50101 &
+#pypy src/pfpdagent.py localhost 50100 &
+pypy src/pfagent.py localhost 50101 &
+#pypy src/pfpdagent.py localhost 50102 &
+#pypy src/pfpdagent.py localhost 50103 &
 #pypy ../../bzrflag/bzagents/agent0.py localhost 50101 &
-pypy src/really_dumb_agent.py localhost 50102 &
+pypy src/really_dumb_agent.py localhost 50100 &
 #pypy src/pfagent.py localhost 50102 &
 #pypy src/pfagent.py localhost 50103 &
 #pypy ../../bzrflag/bzagents/agent0.py localhost 50103 &

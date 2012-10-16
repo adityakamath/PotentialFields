@@ -30,8 +30,8 @@ class Agent(object):
         self.obstacles = self.bzrc.get_obstacles()
         self.fire = True
         self.tangential_clockwise = True#bool(random.getrandbits(1))
-        self.kp = 0.75
-        self.kd = 0.07
+        self.kp = 0.25
+        self.kd = 0.05
         self.attractive_dx = self.attractive_dy = 0
         self.prev_e_x = 0
         self.prev_e_y = 0
@@ -121,9 +121,6 @@ class Agent(object):
             
     def pd_controller(self, tank, delta_x, delta_y):
 
-        sign = lambda x : cmp(x, 0)
-
-        dt = time.time() - self.prev_t
         e_x = self.attractive_dx - delta_x
         e_y = self.attractive_dy - delta_y
         de_x = (e_x-self.prev_e_x)
@@ -155,12 +152,41 @@ class Agent(object):
         return (new_delta_x, new_delta_y)
 
     def combine_delta_and_error(self, target, delta, error):
-        sign = lambda x : cmp(x, 0)
+#        sign = lambda x : cmp(x, 0)
+#        
+#        target_sign = sign(target)
+#        delta_sign = sign(delta)
+#        error_sign =sign(error)
+#        
+#        if delta_sign > 0:
+#            if error > 0:
+#                if delta > target:
+#                    return delta - error
+#                else:
+#                    return delta + error
+#        else: # if negative
+#            if error_sign > 0:
+#                if delta > target:
+#                    return delta - error
+#                else:
+#                    return delta + error
+#            else:
+#                if target_sign > 0:
+#                    if delta > target:
+#                        return delta + error
+#                    else:
+#                        return delta - error
+#                else:
+#                    if delta > target:
+#                        return delta - error
+#                    else:
+#                        return delta + error
+#        
+#        return delta  
         
-        target_sign = sign(target)
-        error_sign =sign(error)
+        return delta + error
         
-        new_delta = delta + error
+        #new_delta = delta + error
         
 #        if target_sign != error_sign:
 #            f = -1 * (target * error)
@@ -176,7 +202,7 @@ class Agent(object):
 #            else:
 #                new_delta = delta + f
 
-        return new_delta
+        #return new_delta
 
     def compute_attractive_x_and_y(self, flag, d, tank, r):
         if d == 0:
